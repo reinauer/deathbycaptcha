@@ -15,7 +15,9 @@
     #include <sys/socket.h>
     #include <netdb.h>
 #endif  /* _WIN32 */
-
+#ifdef __APPLE__
+#include <dispatch/dispatch.h>
+#endif
 #ifdef _WIN32
     #define DBC_DLL_PUBLIC __declspec(dllexport)
 #else
@@ -54,6 +56,8 @@ typedef struct {
     int socket;
 #ifdef _WIN32
     HANDLE socket_lock;
+#elif defined(__APPLE__)
+    dispatch_semaphore_t socket_lock;
 #else
     sem_t socket_lock;
 #endif  /* _WIN32 */

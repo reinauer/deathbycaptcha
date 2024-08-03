@@ -27,6 +27,9 @@
     #include <netdb.h>
     #include <unistd.h>
 #endif  /* _WIN32 */
+#ifdef __APPLE__
+#include <dispatch/dispatch.h>
+#endif
 
 #include "base64.h"
 #include "cJSON.h"
@@ -375,6 +378,8 @@ cJSON *dbc_call(dbc_client *client, const char *cmd, cJSON *args)
 
 #ifdef _WIN32
         if (WAIT_OBJECT_0 == WaitForSingleObject(client->socket_lock, INFINITE)) {
+#elif defined(__APPLE__)
+	if (!dispatch_semaphore_wait(client->socket_lock, DISPATCH_TIME_FOREVER)) {
 #else
         if (!sem_wait(&(client->socket_lock))) {
 #endif  /* _WIN32 */
@@ -411,6 +416,8 @@ cJSON *dbc_call(dbc_client *client, const char *cmd, cJSON *args)
             }
 #ifdef _WIN32
             ReleaseMutex(client->socket_lock);
+#elif defined(__APPLE__)
+	    dispatch_semaphore_signal(client->socket_lock);
 #else
             sem_post(&(client->socket_lock));
 #endif  /* _WIN32 */
@@ -452,6 +459,8 @@ void dbc_close(dbc_client *client)
 #ifdef _WIN32
         WSACleanup();
         CloseHandle(client->socket_lock);
+#elif defined(__APPLE__)
+	dispatch_release(client->socket_lock);
 #else
         sem_destroy(&(client->socket_lock));
 #endif  /* _WIN32 */
@@ -499,6 +508,10 @@ int dbc_init(dbc_client *client, const char *username, const char *password)
             lock_sec.bInheritHandle = TRUE;
             if (NULL == (client->socket_lock = CreateMutex(&lock_sec, FALSE, NULL))) {
                 fprintf(stderr, "CreateMutex(): %d\n", (int)GetLastError());
+#elif defined(__APPLE__)
+	    client->socket_lock = dispatch_semaphore_create(1); // init with value of 1
+	    if (!client->socket_lock) {
+                fprintf(stderr, "sem_init(): %d\n", errno);
 #else
             if (sem_init(&(client->socket_lock), 0, 1)) {
                 fprintf(stderr, "sem_init(): %d\n", errno);
@@ -563,6 +576,10 @@ int dbc_init_token(dbc_client *client, const char *authtoken)
             lock_sec.bInheritHandle = TRUE;
             if (NULL == (client->socket_lock = CreateMutex(&lock_sec, FALSE, NULL))) {
                 fprintf(stderr, "CreateMutex(): %d\n", (int)GetLastError());
+#elif defined(__APPLE__)
+	    client->socket_lock=dispatch_semaphore_create(1);
+	    if (!client->socket_lock) {
+                fprintf(stderr, "sem_init(): %d\n", errno);
 #else
             if (sem_init(&(client->socket_lock), 0, 1)) {
                 fprintf(stderr, "sem_init(): %d\n", errno);
