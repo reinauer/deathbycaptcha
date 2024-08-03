@@ -9,7 +9,7 @@
 
 #include "deathbycaptcha.h"
 
-void _show_version()
+void _show_version(void)
 {
     printf("%s\n(C) 2010 and onwards, deathbycaptcha.com\n", DBC_API_VERSION);
 }

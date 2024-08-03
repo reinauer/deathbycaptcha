@@ -78,7 +78,7 @@ size_t dbc_load_file(FILE *f, char **buf)
 /**
  * Choose a random socket API port.
  */
-unsigned short dbc_get_random_port()
+unsigned short dbc_get_random_port(void)
 {
     srand(time(NULL));
     return DBC_FIRST_PORT + (int)(((float)rand() / RAND_MAX) * (DBC_LAST_PORT - DBC_FIRST_PORT + 1));
